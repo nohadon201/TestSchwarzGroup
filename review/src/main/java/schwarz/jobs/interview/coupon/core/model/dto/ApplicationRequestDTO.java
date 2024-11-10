@@ -1,11 +1,11 @@
-package schwarz.jobs.interview.coupon.web.dto;
+package schwarz.jobs.interview.coupon.core.model.dto;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import lombok.Builder;
 import lombok.Data;
-import schwarz.jobs.interview.coupon.core.services.model.Basket;
+import schwarz.jobs.interview.coupon.core.model.Basket;
 
 @Data
 @Builder

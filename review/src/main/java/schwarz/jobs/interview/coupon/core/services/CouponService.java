@@ -1,20 +1,20 @@
 package schwarz.jobs.interview.coupon.core.services;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import schwarz.jobs.interview.coupon.core.domain.Coupon;
+import schwarz.jobs.interview.coupon.core.model.Coupon;
 import schwarz.jobs.interview.coupon.core.repository.CouponRepository;
-import schwarz.jobs.interview.coupon.core.services.model.Basket;
-import schwarz.jobs.interview.coupon.web.dto.CouponDTO;
-import schwarz.jobs.interview.coupon.web.dto.CouponRequestDTO;
+import schwarz.jobs.interview.coupon.core.model.Basket;
+import schwarz.jobs.interview.coupon.core.model.dto.CouponDTO;
+import schwarz.jobs.interview.coupon.core.model.dto.CouponRequestDTO;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CouponService {
 
     private final CouponRepository couponRepository;
@@ -23,54 +23,48 @@ public class CouponService {
         return couponRepository.findByCode(code);
     }
 
-    public Optional<Basket> apply(final Basket basket, final String code) {
-
-        return getCoupon(code).map(coupon -> {
-
-            if (basket.getValue().doubleValue() >= 0) {
-
-                if (basket.getValue().doubleValue() > 0) {
-
-                    basket.applyDiscount(coupon.getDiscount());
-
-                } else if (basket.getValue().doubleValue() == 0) {
-                    return basket;
-                }
-
-            } else {
-                System.out.println("DEBUG: TRIED TO APPLY NEGATIVE DISCOUNT!");
-                throw new RuntimeException("Can't apply negative discounts");
-            }
+    public Optional<Basket> apply(Basket basket, String code) {
+         return getCoupon(code.toLowerCase()).map(coupon -> {
+             if(basket.getValue().doubleValue() < 0.0) {
+                 log.error("Error applying discount. Basket value is minor than 0. For Basket id: (basketID)");
+                 return null;
+             } else if (basket.getValue().doubleValue() > 0.0 && basket.getValue().doubleValue() >= coupon.getMinBasketValue().doubleValue()) {
+                 basket.applyDiscount(coupon.getDiscount());
+             }
 
             return basket;
         });
     }
 
-    public Coupon createCoupon(final CouponDTO couponDTO) {
 
+    public Coupon createCoupon(final CouponDTO couponDTO) throws Exception {
         Coupon coupon = null;
 
-        try {
+        List<Coupon> list = getCoupons( CouponRequestDTO.builder().codes( Arrays.asList( couponDTO.getCode() ) ).build() );
+
+        if(list != null && list.isEmpty()) {
             coupon = Coupon.builder()
-                .code(couponDTO.getCode().toLowerCase())
-                .discount(couponDTO.getDiscount())
-                .minBasketValue(couponDTO.getMinBasketValue())
-                .build();
+                    .code(couponDTO.getCode().toLowerCase())
+                    .discount(couponDTO.getDiscount())
+                    .minBasketValue(couponDTO.getMinBasketValue())
+                    .build();
 
-        } catch (final NullPointerException e) {
-
-            // Don't coupon when code is null
+            couponRepository.save(coupon); // May produce an error
         }
 
-        return couponRepository.save(coupon);
+        return coupon;
     }
 
-    public List<Coupon> getCoupons(final CouponRequestDTO couponRequestDTO) {
+    public List<Coupon> getCoupons(CouponRequestDTO couponRequestDTO) {
 
-        final ArrayList<Coupon> foundCoupons = new ArrayList<>();
+        ArrayList<Coupon> foundCoupons = new ArrayList<>();
 
-        couponRequestDTO.getCodes().forEach(code -> foundCoupons.add(couponRepository.findByCode(code).get()));
+        couponRequestDTO.getCodes().forEach(code -> {
+            Optional<Coupon> optional = couponRepository.findByCode(code);
+            optional.ifPresent(foundCoupons::add);
+        });
 
         return foundCoupons;
     }
+
 }

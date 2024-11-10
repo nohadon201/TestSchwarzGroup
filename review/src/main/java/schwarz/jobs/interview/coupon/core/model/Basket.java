@@ -1,4 +1,4 @@
-package schwarz.jobs.interview.coupon.core.services.model;
+package schwarz.jobs.interview.coupon.core.model;
 
 import java.math.BigDecimal;
 
@@ -19,8 +19,8 @@ public class Basket {
     private boolean applicationSuccessful;
 
     public void applyDiscount(final BigDecimal discount) {
-        this.applicationSuccessful = false;
         this.appliedDiscount = discount;
+        this.applicationSuccessful = true;
     }
 
 }
